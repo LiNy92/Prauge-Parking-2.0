@@ -63,7 +63,10 @@ public class Meny
                 case "Visa prislista":
                     { break; }
                 case "Visa parkeringsgarage":
-                    { break; }
+                    {
+                        var parkeringsvakt = new ParkeringsVakt();
+                            parkeringsvakt.VisaParkeringsGarage(garage);
+                        break; }
                 case "Avsluta program":
                     { return; }
             }
@@ -71,9 +74,9 @@ public class Meny
     }
 }
 
-public class ParkeringsVakt
+public class ParkeringsVakt     //
 {
-    public void PåbörjaIncheckning(ParkeringsGarage garage)      //Kolla över detta namn , garagevariabeln .
+    public void PåbörjaIncheckning(ParkeringsGarage garage)
     {
         var fordonstyp = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -142,10 +145,55 @@ public class ParkeringsVakt
         }
     }
 
+    //public int VäljaLedigPlats()
+    //{
+    //    int valdPlats;
+    //}
+
     public void VisaParkeringsGarage(ParkeringsGarage garage)
     {
+        var tabell = new Table();
+        tabell.Border(TableBorder.Rounded);
+        tabell.Title("[bold cyan]Prague Parking - Garageöversikt[/]");
 
+        for (int i = 1; i <= 10; i++)
+        {
+            tabell.AddColumn(new TableColumn($"[grey]Kolumn {i}[/]").Centered());
+        }
+        for (int i = 0; i < garage.Rutor.Count; i += 10)
+        {
+            var rad = new string[10];
+                for (int j = 0; j < 10; j++)
+            {
+                int index = i + j;
+                if (index < garage.Rutor.Count)
+                {
+                    var ruta = garage.Rutor[index];
+
+                    if (ruta.ParkeradeFordon.Count == 0)
+                    {
+                        rad[j] = $"[green]Plats: {ruta.Plats}\nLedig[/]";
+                    }
+                    else
+                    {
+                        int upptaget = ruta.ParkeradeFordon.Sum(fordon => fordon.Storlek);
+                        if (upptaget < 4)
+                        {
+                            rad[j] = $"[orange1]Plats: {ruta.Plats}\nDelvis ({upptaget}/4)[/]";
+                        }
+                        else
+                        {
+                            rad[j] = $"[red]Plats {ruta.Plats} \n Upptagen[/]";
+                        }
+
+                    }
+                }
+            }
+            tabell.AddRow(rad);
+        }
+        AnsiConsole.Write(tabell);
     }
+
     private void ParkeraFordon(ParkeringsGarage garage, Fordon nyttFordon, string regNr)
     {
         ParkeringsRuta ledigPlats = garage.HittaLedigPlats(nyttFordon);
@@ -234,6 +282,26 @@ public class ParkeringsGarage
         }
     }
 
+    public Dictionary<string, int> BeräknaAntalFordon()
+    {
+        var totalen = new Dictionary<string, int>();
+        foreach (var ruta in Rutor)
+        {
+            foreach (var fordon in ruta.ParkeradeFordon)
+            {
+                if (totalen.ContainsKey(fordon.Fordonstyp))
+                {
+                    totalen[fordon.Fordonstyp]++;
+                }
+                else
+                {
+                    totalen[fordon.Fordonstyp] = 1;
+                }
+            }
+        }
+        return totalen;
+    }
+
     public ParkeringsRuta HittaLedigPlats(Fordon fordon)
     {
         foreach (var ruta in Rutor)
@@ -277,6 +345,20 @@ public class ParkeringsGarage
         return null;
     }
 
+    public Fordon FlyttaFordon(string regNr, int valdPlats)
+    {
+        ParkeringsRuta ruta = SökaFordon(regNr);
+        Fordon fordonAttFlytta = ruta.HittaFordonIRuta(regNr);
+
+        //if (/*valdPlats = true*/)
+        {
+            ruta.ParkeradeFordon.Remove(fordonAttFlytta);
+
+            /* valdPlats = ruta.ParkeradeFordon.Add(fordonAttFlytta); */// Får klura på denna logik.. Den behöver ju sättas in på valdplats. inte "ruta" igen.
+            return fordonAttFlytta;
+        }
+        return null;
+    }
 
 }
 
