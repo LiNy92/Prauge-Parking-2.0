@@ -44,12 +44,16 @@ public class Meny
                     }
                 case "Checka ut fordon":
                     {
+                        var parkeringsvakt = new ParkeringsVakt();
+                        parkeringsvakt.GenomförUtcheckning(garage);
                         break;
                     }
                 case "Söka fordon":
                     {
                         var parkeringsvakt = new ParkeringsVakt();
-                       
+                        string regNr = parkeringsvakt.AngeRegNr();
+                        parkeringsvakt.SökaFordon(garage);
+
                         break;
                     }
                 case "Flytta fordon":
@@ -99,13 +103,49 @@ public class ParkeringsVakt
         return;
     }
 
+    public void GenomförUtcheckning(ParkeringsGarage garage)
+    {
+        string regNr = AngeRegNr();
+        ParkeringsRuta funnenRuta = garage.SökaFordon(regNr);
+        if (funnenRuta != null)
+        {
+            Fordon funnetFordon = funnenRuta.HittaFordonIRuta(regNr);
+            garage.TaBortFordon(regNr);
+            AnsiConsole.MarkupLine("Utcheckning:");
+            AnsiConsole.MarkupLine($"[green]Fordon: {funnetFordon.Fordonstyp}\nRegNr: {regNr}\nPlats:{funnenRuta.Plats}[/]");
+            AnsiConsole.MarkupLine("Genomförd");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("Det gick ej att utföra utcheckningen.");
+        }
+    }
+
     public string AngeRegNr()
     {
         var regNr = AnsiConsole.Ask<string>("[green]\nVänligen ange registreringsnummer (max 10 tecken):[/]").ToUpper().Trim();
         AnsiConsole.MarkupLine($"Du angav registreringsnummer: [red]{regNr}[/]");
         return regNr;
     }
+    public void SökaFordon(ParkeringsGarage garage)
+    {
+        string regNr = AngeRegNr();
+        ParkeringsRuta funnenRuta = garage.SökaFordon(regNr);
+        if (funnenRuta != null)
+        {
+            Fordon funnetFordon = funnenRuta.HittaFordonIRuta(regNr);
+            AnsiConsole.MarkupLine($"[green]Fordon: {funnetFordon.Fordonstyp}\nRegNr: {regNr}\nPlats:{funnenRuta.Plats}[/]");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[red]Fordonet hittades inte.[/]");
+        }
+    }
 
+    public void VisaParkeringsGarage(ParkeringsGarage garage)
+    {
+
+    }
     private void ParkeraFordon(ParkeringsGarage garage, Fordon nyttFordon, string regNr)
     {
         ParkeringsRuta ledigPlats = garage.HittaLedigPlats(nyttFordon);
@@ -193,10 +233,6 @@ public class ParkeringsGarage
             Rutor.Add(new ParkeringsRuta(i)); // Lägger till plats 1-100 i garaget
         }
     }
-    public void VisaParkeringsGarage()
-    {
-        //Visualisering av garaget och fyllda platser.
-    }
 
     public ParkeringsRuta HittaLedigPlats(Fordon fordon)
     {
@@ -211,41 +247,32 @@ public class ParkeringsGarage
         }
         return null;
     }
-    public ParkeringsRuta HittaFordon(string regNr)
+    public ParkeringsRuta SökaFordon(string regNr)
     {
         foreach (var ruta in Rutor)
         {
-            foreach (var fordon in ruta.ParkeradeFordon)
+            Fordon funnetFordon = ruta.HittaFordonIRuta(regNr);
+
+            if (funnetFordon != null)
             {
-                if (fordon.RegNr == regNr)
-                {
-                    return ruta;
-                }
+                return ruta;
             }
         }
         return null;
-
     }
     public Fordon TaBortFordon(string regNr)
     {
-        ParkeringsRuta ruta = HittaFordon(regNr);
+        ParkeringsRuta ruta = SökaFordon(regNr);
         if (ruta == null)
         {
             return null;
         }
-        Fordon funnetFordon = null;
-        foreach (var fordon in ruta.ParkeradeFordon)
+        Fordon fordonAttCheckaUt = ruta.HittaFordonIRuta(regNr);
+
+        if (fordonAttCheckaUt != null)
         {
-            if (fordon.RegNr == regNr)
-            {
-                funnetFordon = fordon;
-                break;
-            }
-        }
-        if (funnetFordon != null)
-        {
-            ruta.ParkeradeFordon.Remove(funnetFordon);
-            return funnetFordon;
+            ruta.ParkeradeFordon.Remove(fordonAttCheckaUt);
+            return fordonAttCheckaUt;
         }
         return null;
     }
@@ -259,10 +286,18 @@ public class ParkeringsRuta
     public List<Fordon> ParkeradeFordon { get; set; } = new List<Fordon>();
     public ParkeringsRuta(int plats)
     {
-        if (plats == 4)
-        {
-            //Platsen fylld  - vet inte var jag ska ha logisken för att platsen har maxvärdet 4.
-        }
         Plats = plats;
     }
+    public Fordon HittaFordonIRuta(string regNr)
+    {
+        foreach (var fordon in ParkeradeFordon)
+        {
+            if (fordon.RegNr == regNr)
+            {
+                return fordon;
+            }
+        }
+        return null;
+    }
+
 }
