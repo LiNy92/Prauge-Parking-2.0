@@ -1,4 +1,5 @@
-﻿using Spectre.Console;
+﻿using Prague_Parking_2._0;
+using Spectre.Console;
 
 namespace Prague_Parking_2._0;
 
@@ -6,70 +7,8 @@ internal class Program
 {
     static void Main(string[] args)
     {
-
-        while (true)
-        {
-
-            var menyVal = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("Meny - Prauge Parking")
-                    .AddChoices("Checka in fordon", "Checka ut fordon", "Söka fordon", "Flytta fordon", "Visa prislista", "Visa parkeringsgarage", "Avsluta program"));
-
-            AnsiConsole.MarkupLine($"Du har valt: [green]{menyVal}[/]");
-            switch (menyVal)
-            {
-
-
-                case "Checka in fordon":
-                    {
-                        //metod incheckning ??
-                        var fordonstyp = AnsiConsole.Prompt(
-                            new SelectionPrompt<string>()
-                            .Title("Vilket fordon önskar du checka in?")
-                            .AddChoices("Bil", "MC", "Buss", "Cykel", "Återgå till meny"));
-
-                        if (fordonstyp == "Återgå till meny") continue;
-
-                        var regNr = AnsiConsole.Ask<string>("[green]\nVänligen ange registreringsnummer (max 10 tecken):[/]").ToUpper().Trim();
-                        AnsiConsole.MarkupLine($"Du angav registreringsnummer: [red]{regNr}[/]");
-                        if (AnsiConsole.Confirm("Vill du checka in angivet fordon."))
-                        {
-                            Fordon nyttFordon = null;
-                            switch (fordonstyp)
-                            {
-                                case "Bil":
-                                    nyttFordon = new Bil(regNr);        //Ska läggas till i listan
-                                    break;
-                                case "MC":
-                                    nyttFordon = new MC(regNr);         //Add till listan
-                                    break;
-                            }
-                            AnsiConsole.MarkupLine($"[green]Din {nyttFordon.Fordonstyp} med registreringsnummer: {nyttFordon.RegNr} har checkat in på plats: ???.[/]");
-                        }
-                        else continue;
-
-                        break;
-                    }
-                case "Checka ut fordon":
-                    {
-                        break;
-                    }
-                case "Söka fordon":
-                {
-                    break;
-                }
-                case "Flytta fordon":
-                    {
-                        break;
-                    }
-                case "Visa prislista":
-                    {  break;}
-                case "Visa parkeringsgarage":
-                    { break; }
-                case "Avsluta program":
-                    { return; }
-            }
-        }
+        var meny = new Meny();
+        meny.StartaMeny();
 
     }
 
@@ -81,23 +20,107 @@ internal class Program
 
 
 
+public class Meny
+{
+    public void StartaMeny()
+    {
+        var garage = new ParkeringsGarage();
+        while (true)
+        {
 
-    //string AngeRegNummer()
-    //{
-    //    while (true)
-    //    {
-    //        string regNr = AnsiConsole.Ask<string>("\nVänligen ange regnr (max 10 tecken): ");
-    //        string regNr = Console.ReadLine().ToUpper().Trim(); //Omvandlar till stora bokstäver här direkt och tar bort eventuella mellanslag
+            var menyVal = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("Meny - Prauge Parking")
+                    .AddChoices("Checka in fordon", "Checka ut fordon", "Söka fordon", "Flytta fordon", "Visa prislista", "Visa parkeringsgarage", "Avsluta program"));
 
-    //        if (regNr.Length > 0 && regNr.Length <= 10)
-    //        {
-    //            return regNr;
-    //        }
-    //        Console.WriteLine("Ogiltig inmatning. Registeringsnumret får ej vara tomt eller innehålla fler än 10 tecken. Försök igen.");
-    //    }
-    //}
+            AnsiConsole.MarkupLine($"Du har valt: [green]{menyVal}[/]");
+            switch (menyVal)
+            {
+                case "Checka in fordon":
+                    {
+                        var parkeringsvakt = new ParkeringsVakt();
+                        parkeringsvakt.PåbörjaIncheckning(garage);
+                        break;
+                    }
+                case "Checka ut fordon":
+                    {
+                        break;
+                    }
+                case "Söka fordon":
+                    {
+                        var parkeringsvakt = new ParkeringsVakt();
+                       
+                        break;
+                    }
+                case "Flytta fordon":
+                    {
+                        break;
+                    }
+                case "Visa prislista":
+                    { break; }
+                case "Visa parkeringsgarage":
+                    { break; }
+                case "Avsluta program":
+                    { return; }
+            }
+        }
+    }
+}
 
+public class ParkeringsVakt
+{
+    public void PåbörjaIncheckning(ParkeringsGarage garage)      //Kolla över detta namn , garagevariabeln .
+    {
+        var fordonstyp = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+            .Title("Vilket fordon önskar du checka in?")
+            .AddChoices("Bil", "MC", "Återgå till meny"));
 
+        if (fordonstyp == "Återgå till meny") return;
+
+        string regNr = AngeRegNr();
+        if (AnsiConsole.Confirm("Vill du checka in angivet fordon."))
+        {
+            Fordon nyttFordon = null;
+            switch (fordonstyp)
+            {
+                case "Bil":
+                    nyttFordon = new Bil(regNr);
+                    break;
+                case "MC":
+                    nyttFordon = new MC(regNr);         //Add till listan
+                    break;
+            }
+            if (nyttFordon != null)
+            {
+                ParkeraFordon(garage, nyttFordon, regNr);
+            }
+        }
+        return;
+    }
+
+    public string AngeRegNr()
+    {
+        var regNr = AnsiConsole.Ask<string>("[green]\nVänligen ange registreringsnummer (max 10 tecken):[/]").ToUpper().Trim();
+        AnsiConsole.MarkupLine($"Du angav registreringsnummer: [red]{regNr}[/]");
+        return regNr;
+    }
+
+    private void ParkeraFordon(ParkeringsGarage garage, Fordon nyttFordon, string regNr)
+    {
+        ParkeringsRuta ledigPlats = garage.HittaLedigPlats(nyttFordon);
+        if (ledigPlats != null)
+        {
+            ledigPlats.ParkeradeFordon.Add(nyttFordon);
+            AnsiConsole.MarkupLine($"[green]Fordon: {nyttFordon.Fordonstyp}\nRegistreringnummer: {regNr}\nIncheckad på plats: {ledigPlats.Plats}  [/]");
+        }
+        else
+        {
+
+            AnsiConsole.MarkupLine($"[red]Ingen ledig plats hittades.[/]");
+        }
+    }
+}
 
 
 public abstract class Fordon
@@ -120,6 +143,10 @@ public abstract class Fordon
 
     public Fordon(string fordonstyp, string regNr)
     {
+        if (string.IsNullOrWhiteSpace(regNr) || regNr.Length > 10)
+        {
+            throw new ArgumentException("Ogiltig inmatning. Registeringsnumret får ej vara tomt eller innehålla fler än 10 tecken. Försök igen.");
+        }
         Fordonstyp = fordonstyp;
         RegNr = regNr;
     }
@@ -140,14 +167,14 @@ public class MC : Fordon
 
     }
 }
-public class Buss : Fordon
+public class Buss : Fordon  //Endast påbörjade ej prio
 {
     public Buss(string regNr) : base("Buss", regNr)
     {
 
     }
 }
-public class Cykel : Fordon
+public class Cykel : Fordon // Endast påbörjade ej prio
 {
     public Cykel(string regNr) : base("Cykel", regNr)
     {
@@ -157,19 +184,85 @@ public class Cykel : Fordon
 
 public class ParkeringsGarage
 {
-    public List<int> ParkeringsPlats { get; set; } = new List<int>();
+    public List<ParkeringsRuta> Rutor { get; set; } = new List<ParkeringsRuta>();
 
     public ParkeringsGarage()
     {
-        for (int i = 0; i < 100; i++)
+        for (int i = 1; i <= 100; i++)
         {
-
+            Rutor.Add(new ParkeringsRuta(i)); // Lägger till plats 1-100 i garaget
         }
     }
+    public void VisaParkeringsGarage()
+    {
+        //Visualisering av garaget och fyllda platser.
+    }
+
+    public ParkeringsRuta HittaLedigPlats(Fordon fordon)
+    {
+        foreach (var ruta in Rutor)
+        {
+            int upptagetUtrymme = ruta.ParkeradeFordon.Sum(fordon => fordon.Storlek);
+            int ledigtUtrymme = 4 - upptagetUtrymme;
+            if (ledigtUtrymme >= fordon.Storlek)
+            {
+                return ruta;
+            }
+        }
+        return null;
+    }
+    public ParkeringsRuta HittaFordon(string regNr)
+    {
+        foreach (var ruta in Rutor)
+        {
+            foreach (var fordon in ruta.ParkeradeFordon)
+            {
+                if (fordon.RegNr == regNr)
+                {
+                    return ruta;
+                }
+            }
+        }
+        return null;
+
+    }
+    public Fordon TaBortFordon(string regNr)
+    {
+        ParkeringsRuta ruta = HittaFordon(regNr);
+        if (ruta == null)
+        {
+            return null;
+        }
+        Fordon funnetFordon = null;
+        foreach (var fordon in ruta.ParkeradeFordon)
+        {
+            if (fordon.RegNr == regNr)
+            {
+                funnetFordon = fordon;
+                break;
+            }
+        }
+        if (funnetFordon != null)
+        {
+            ruta.ParkeradeFordon.Remove(funnetFordon);
+            return funnetFordon;
+        }
+        return null;
+    }
+
+
 }
 
-
-public class ParkeringsRuta : ParkeringsGarage
+public class ParkeringsRuta
 {
-
+    public int Plats { get; }
+    public List<Fordon> ParkeradeFordon { get; set; } = new List<Fordon>();
+    public ParkeringsRuta(int plats)
+    {
+        if (plats == 4)
+        {
+            //Platsen fylld  - vet inte var jag ska ha logisken för att platsen har maxvärdet 4.
+        }
+        Plats = plats;
+    }
 }
