@@ -65,8 +65,9 @@ public class Meny
                 case "Visa parkeringsgarage":
                     {
                         var parkeringsvakt = new ParkeringsVakt();
-                            parkeringsvakt.VisaParkeringsGarage(garage);
-                        break; }
+                        parkeringsvakt.VisaParkeringsGarage(garage);
+                        break;
+                    }
                 case "Avsluta program":
                     { return; }
             }
@@ -153,40 +154,48 @@ public class ParkeringsVakt     //
     public void VisaParkeringsGarage(ParkeringsGarage garage)
     {
         var tabell = new Table();
-        tabell.Border(TableBorder.Rounded);
+        tabell.Border(TableBorder.None);
+        tabell.HideHeaders();
         tabell.Title("[bold cyan]Prague Parking - Garageöversikt[/]");
 
         for (int i = 1; i <= 10; i++)
         {
-            tabell.AddColumn(new TableColumn($"[grey]Kolumn {i}[/]").Centered());
+            tabell.AddColumn(new TableColumn("").Centered());
+
         }
         for (int i = 0; i < garage.Rutor.Count; i += 10)
         {
-            var rad = new string[10];
-                for (int j = 0; j < 10; j++)
+            var rad = new Spectre.Console.Rendering.IRenderable[10];
+
+            for (int j = 0; j < 10; j++)
             {
                 int index = i + j;
                 if (index < garage.Rutor.Count)
                 {
                     var ruta = garage.Rutor[index];
+                    string textIRutan = $"[bold]Plats {ruta.Plats}[/]\n";
 
                     if (ruta.ParkeradeFordon.Count == 0)
                     {
-                        rad[j] = $"[green]Plats: {ruta.Plats}\nLedig[/]";
+                        textIRutan += "[green]Ledig[/]";
                     }
                     else
                     {
                         int upptaget = ruta.ParkeradeFordon.Sum(fordon => fordon.Storlek);
-                        if (upptaget < 4)
+                        string färg;
+                        if (upptaget == 4) { färg = "red"; }
+                        else { färg = "orange1"; }
+
+                        foreach (var fordon in ruta.ParkeradeFordon)
                         {
-                            rad[j] = $"[orange1]Plats: {ruta.Plats}\nDelvis ({upptaget}/4)[/]";
-                        }
-                        else
-                        {
-                            rad[j] = $"[red]Plats {ruta.Plats} \n Upptagen[/]";
+                            textIRutan += $"[{färg}] {fordon.Fordonstyp} {fordon.RegNr}[/]";
                         }
 
                     }
+                    rad[j] = new Panel(textIRutan)
+                         .Border(BoxBorder.Rounded)
+                            .PadLeft(0)
+                            .PadRight(0);
                 }
             }
             tabell.AddRow(rad);
