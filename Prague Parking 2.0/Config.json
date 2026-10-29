@@ -1,0 +1,12 @@
+﻿{
+  "GarageSettings": {
+    "MaxAntalGaragePlatser": 100,
+    "MaxKapacitetPerRuta": 4,
+    "KolumnerPerRadUtskrift": 10
+  },
+  "FriaMinuter": 10,
+  "Priser": {
+    "Bil": 20,
+    "MC": 10
+  }
+}

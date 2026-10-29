@@ -16,4 +16,10 @@
     <ProjectReference Include="..\Prague Parking Library\Prague Parking Library.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

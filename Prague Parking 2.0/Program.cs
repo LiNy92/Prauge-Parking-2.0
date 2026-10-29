@@ -1,4 +1,4 @@
-﻿using Prague_Parking_2._0;
+﻿using Prague_Parking_Library;
 using Spectre.Console;
 
 namespace Prague_Parking_2._0;
@@ -7,24 +7,21 @@ internal class Program
 {
     static void Main(string[] args)
     {
+        AppConfig config = Konfigurationshanterare.Ladda();
+
         var meny = new Meny();
-        meny.StartaMeny();
+        meny.StartaMeny(config);
 
     }
 
 }
 
 
-
-
-
-
-
 public class Meny
 {
-    public void StartaMeny()
+    public void StartaMeny(AppConfig config)
     {
-        var garage = new ParkeringsGarage();
+        var garage = new ParkeringsGarage(config);
         while (true)
         {
 
@@ -39,20 +36,20 @@ public class Meny
                 case "Checka in fordon":
                     {
                         var parkeringsvakt = new ParkeringsVakt();
-                        parkeringsvakt.PåbörjaIncheckning(garage);
+                        parkeringsvakt.PåbörjaIncheckning(garage, config);
                         break;
                     }
                 case "Checka ut fordon":
                     {
                         var parkeringsvakt = new ParkeringsVakt();
-                        parkeringsvakt.GenomförUtcheckning(garage);
+                        parkeringsvakt.VerkställUtcheckning(garage, config);
                         break;
                     }
                 case "Söka fordon":
                     {
                         var parkeringsvakt = new ParkeringsVakt();
                         string regNr = parkeringsvakt.AngeRegNr();
-                        parkeringsvakt.HittaFordonsplats(garage);
+                        parkeringsvakt.SökaFordonOchPlats(garage);
 
                         break;
                     }
@@ -78,9 +75,33 @@ public class Meny
     }
 }
 
+
+
+
+public class PrisLista
+{
+    private readonly AppConfig _config;
+    public PrisLista(AppConfig config)
+    {
+        _config = config;
+    }
+    public decimal BeräknaKostnad(Fordon fordon)
+    {
+        TimeSpan tidParkerad = DateTime.UtcNow - fordon.AnkomstTid;
+        decimal antalTimmar = (decimal)Math.Ceiling(tidParkerad.TotalHours);
+        if (tidParkerad.TotalMinutes <= _config.FriaMinuter)
+        {
+            return 0.0M;
+        }
+
+        decimal totalKostnad = _config.Priser[fordon.Fordonstyp] * antalTimmar;
+        return totalKostnad;
+    }
+}
+
 public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
 {
-    public void PåbörjaIncheckning(ParkeringsGarage garage)
+    public void PåbörjaIncheckning(ParkeringsGarage garage, AppConfig config)
     {
         var fordonstyp = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -90,6 +111,12 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
         if (fordonstyp == "Återgå till meny") return;
 
         string regNr = AngeRegNr();
+        if (garage.SökaFordonsPlats(regNr) != null)
+        {
+            AnsiConsole.MarkupLine($"[red]Ett fordon med registreringsrummer {regNr} finns redan incheckat i garaget![/]");
+            return;
+        }
+
         if (AnsiConsole.Confirm("Vill du checka in angivet fordon."))
         {
             try
@@ -109,7 +136,7 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
                     ParkeraFordon(garage, nyttFordon, regNr);
                 }
             }
-            catch(ArgumentException ex)
+            catch (ArgumentException ex)
             {
                 AnsiConsole.MarkupLine($"[red]{ex.Message}[/]");
                 AnsiConsole.Prompt(
@@ -120,17 +147,26 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
         return;
     }
 
-    public void GenomförUtcheckning(ParkeringsGarage garage)
+    public void VerkställUtcheckning(ParkeringsGarage garage, AppConfig config)
     {
         string regNr = AngeRegNr();
-        ParkeringsRuta funnenRuta = garage.SökaFordon(regNr);
-        if (funnenRuta != null)
+        ParkeringsRuta fordonsPlats = garage.SökaFordonsPlats(regNr);
+        if (fordonsPlats != null)
         {
-            Fordon funnetFordon = funnenRuta.HittaFordonIRuta(regNr);
+            Fordon fordon = fordonsPlats.HittaFordonIRuta(regNr);
+            PrisLista prisLista = new PrisLista(config);
+            decimal kostnad = prisLista.BeräknaKostnad(fordon);
+            TimeSpan tidParkerad = DateTime.UtcNow - fordon.AnkomstTid;
             garage.TaBortFordon(regNr);
-            AnsiConsole.MarkupLine("Utcheckning:");
-            AnsiConsole.MarkupLine($"[green]Fordon: {funnetFordon.Fordonstyp}\nRegNr: {regNr}\nPlats:{funnenRuta.Plats}[/]");
-            AnsiConsole.MarkupLine("Genomförd");
+
+
+            AnsiConsole.MarkupLine("[yellow]=== Utcheckning ===[/]");
+            AnsiConsole.MarkupLine($"[green]Fordon: {fordon.Fordonstyp}\n" +
+                $"RegNr: {regNr}\n" +
+                $"Plats:{fordonsPlats.Plats}\n" +
+                $"Parkerad tid: {tidParkerad.Hours} timmar, {tidParkerad.Minutes} minuter\n" +
+                $"Att betala:{kostnad:C2}[/]");
+            AnsiConsole.MarkupLine("Utcheckning genomförd");
         }
         else
         {
@@ -144,14 +180,14 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
         AnsiConsole.MarkupLine($"Du angav registreringsnummer: [red]{regNr}[/]");
         return regNr;
     }
-    public void HittaFordonsplats(ParkeringsGarage garage)
+    public void SökaFordonOchPlats(ParkeringsGarage garage)
     {
         string regNr = AngeRegNr();
-        ParkeringsRuta funnenRuta = garage.SökaFordon(regNr);
-        if (funnenRuta != null)
+        ParkeringsRuta fordonPlats = garage.SökaFordonsPlats(regNr);
+        if (fordonPlats != null)
         {
-            Fordon funnetFordon = funnenRuta.HittaFordonIRuta(regNr);
-            AnsiConsole.MarkupLine($"[green]Fordon: {funnetFordon.Fordonstyp}\nRegNr: {regNr}\nPlats:{funnenRuta.Plats}[/]");
+            Fordon funnetFordon = fordonPlats.HittaFordonIRuta(regNr);
+            AnsiConsole.MarkupLine($"[green]Fordon: {funnetFordon.Fordonstyp}\nRegNr: {regNr}\nPlats:{fordonPlats.Plats}[/]");
         }
         else
         {
@@ -162,10 +198,11 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
     public void FlyttaFordon(ParkeringsGarage garage)
     {
         string regNr = AngeRegNr();
+        int antalPlatser = garage.Rutor.Count;
         int valdPlats = AnsiConsole.Prompt(new TextPrompt<int>("Vilken plats vill du flytta fordonet till (1-100)?")
             .Validate(plats =>
             {
-                if (plats >= 1 && plats <= 100)
+                if (plats >= 1 && plats <= antalPlatser)
                 {
                     return ValidationResult.Success();
                 }
@@ -225,16 +262,18 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
         tabell.HideHeaders();
         tabell.Title("[bold cyan]Prague Parking - Garageöversikt[/]");
 
-        for (int i = 1; i <= 10; i++)
+        int kolumnPerRad = garage.KolumnPerRad;
+
+        for (int i = 1; i <= kolumnPerRad; i++)
         {
             tabell.AddColumn(new TableColumn("").Centered());
 
         }
-        for (int i = 0; i < garage.Rutor.Count; i += 10)
+        for (int i = 0; i < garage.Rutor.Count; i += kolumnPerRad)
         {
-            var rad = new Spectre.Console.Rendering.IRenderable[10];
+            var rad = new Spectre.Console.Rendering.IRenderable[kolumnPerRad];
 
-            for (int j = 0; j < 10; j++)
+            for (int j = 0; j < kolumnPerRad; j++)
             {
                 int index = i + j;
                 if (index < garage.Rutor.Count)
@@ -250,7 +289,7 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
                     {
                         int upptaget = ruta.ParkeradeFordon.Sum(fordon => fordon.Storlek);
                         string färg;
-                        if (upptaget == 4) { färg = "red"; }
+                        if (upptaget == ruta.MaxKapacitet) { färg = "red"; }
                         else { färg = "orange1"; }
 
                         foreach (var fordon in ruta.ParkeradeFordon)
@@ -275,7 +314,7 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
         ParkeringsRuta ledigPlats = garage.HittaLedigPlats(nyttFordon);
         if (ledigPlats != null)
         {
-            ledigPlats.ParkeradeFordon.Add(nyttFordon);
+            ledigPlats.LäggTillFordon(nyttFordon);
             AnsiConsole.MarkupLine($"[green]Fordon: {nyttFordon.Fordonstyp}\nRegistreringnummer: {regNr}\nIncheckad på plats: {ledigPlats.Plats}  [/]");
         }
         else
@@ -291,20 +330,8 @@ public abstract class Fordon
 {
     public string Fordonstyp { get; set; }
     public string RegNr { get; set; }
-    public int Storlek
-    {
-        get
-        {
-            if (Fordonstyp == "MC")
-            {
-                return 2;
-            }
-            return 4;       //Returnera 4 vid bil.
-        }
-    }
-    public DateTime AnkomstTid { get; set; } = DateTime.Now;
-    public DateTime? UtcheckningsTid { get; set; } = null;
-
+    public abstract int Storlek { get; }
+    public DateTime AnkomstTid { get; set; } = DateTime.UtcNow;
     public Fordon(string fordonstyp, string regNr)
     {
         if (string.IsNullOrWhiteSpace(regNr) || regNr.Length > 10)
@@ -323,6 +350,7 @@ public class Bil : Fordon
     {
 
     }
+    public override int Storlek => 4;
 }
 public class MC : Fordon
 {
@@ -330,6 +358,7 @@ public class MC : Fordon
     {
 
     }
+    public override int Storlek => 2;
 }
 public class Buss : Fordon  //Endast påbörjade ej prio
 {
@@ -337,6 +366,8 @@ public class Buss : Fordon  //Endast påbörjade ej prio
     {
 
     }
+
+    public override int Storlek => 16;
 }
 public class Cykel : Fordon // Endast påbörjade ej prio
 {
@@ -344,17 +375,26 @@ public class Cykel : Fordon // Endast påbörjade ej prio
     {
 
     }
+
+    public override int Storlek => 1;
 }
 
-public class ParkeringsGarage   //ska allt här verkligen vara publikt ??
+public class ParkeringsGarage   //ska allt här verkligen vara publikt ?? - tar bort set - Listan ska ej kunna ändras utifrån
 {
-    public List<ParkeringsRuta> Rutor { get; set; } = new List<ParkeringsRuta>();
+    public List<ParkeringsRuta> Rutor { get; } = new List<ParkeringsRuta>();
 
-    public ParkeringsGarage()
+    private readonly AppConfig _config;
+    public int KolumnPerRad => _config.GarageSettings.KolumnerPerRadUtskrift;
+    public ParkeringsGarage(AppConfig config)
     {
-        for (int i = 1; i <= 100; i++)
+        _config = config;
+
+        int antalPlatser = _config.GarageSettings.MaxAntalGaragePlatser;
+        int maxKapacitetRuta = _config.GarageSettings.MaxKapacitetPerRuta;
+
+        for (int i = 1; i <= _config.GarageSettings.MaxAntalGaragePlatser; i++)
         {
-            Rutor.Add(new ParkeringsRuta(i)); // Lägger till plats 1-100 i garaget
+            Rutor.Add(new ParkeringsRuta(i, maxKapacitetRuta)); // Lägger till platserna i garaget och maxkapaciteten per ruta
         }
     }
 
@@ -384,21 +424,18 @@ public class ParkeringsGarage   //ska allt här verkligen vara publikt ??
         {
             ParkeringsRuta valdRuta = Rutor[valdPlats - 1]; //från språkval till rätt index.
 
-            int platsUtrymme = valdRuta.ParkeradeFordon.Sum(fordon => fordon.Storlek);
-            if ((4 - platsUtrymme) >= fordon.Storlek)
+            if (valdRuta.FinnsLedigPlats(fordon))
             {
                 return valdRuta;
             }
             return null;    //Ingen tillgänglig plats på önskad ruta
         }
 
-        else
+        else // Letar första bästa plats om ej önskemål angivet
         {
-            foreach (var ruta in Rutor) //Letar första bästa plats om ej önskemål angivet
+            foreach (var ruta in Rutor)
             {
-                int upptagetUtrymme = ruta.ParkeradeFordon.Sum(fordon => fordon.Storlek);
-                int ledigtUtrymme = 4 - upptagetUtrymme;
-                if (ledigtUtrymme >= fordon.Storlek)
+                if (ruta.FinnsLedigPlats(fordon))
                 {
                     return ruta;
                 }
@@ -406,7 +443,7 @@ public class ParkeringsGarage   //ska allt här verkligen vara publikt ??
         }
         return null;
     }
-    public ParkeringsRuta SökaFordon(string regNr)
+    public ParkeringsRuta SökaFordonsPlats(string regNr)
     {
         foreach (var ruta in Rutor)
         {
@@ -421,7 +458,7 @@ public class ParkeringsGarage   //ska allt här verkligen vara publikt ??
     }
     public Fordon TaBortFordon(string regNr)
     {
-        ParkeringsRuta ruta = SökaFordon(regNr);
+        ParkeringsRuta ruta = SökaFordonsPlats(regNr);
         if (ruta == null)
         {
             return null;
@@ -430,7 +467,7 @@ public class ParkeringsGarage   //ska allt här verkligen vara publikt ??
 
         if (fordonAttCheckaUt != null)
         {
-            ruta.ParkeradeFordon.Remove(fordonAttCheckaUt);
+            ruta.TaBortFordon(regNr);
             return fordonAttCheckaUt;
         }
         return null;
@@ -438,17 +475,14 @@ public class ParkeringsGarage   //ska allt här verkligen vara publikt ??
 
     public Fordon FlyttaFordon(string regNr, int valdPlats)   //Se över denna - allt relevant att kolla ?? {ska man ha try catch istället?
     {
-        ParkeringsRuta startRuta = SökaFordon(regNr);
-        if (startRuta == null)
-        {
-            return null;   //Fordonet finne ej i garaget
-        }
-
-        Fordon fordon = startRuta.HittaFordonIRuta(regNr);
-        if (fordon == null)
+        ParkeringsRuta startRuta = SökaFordonsPlats(regNr);
+        if (startRuta == null)  //Om fordonet inte finns - returneras null och fångas upp här
         {
             return null;
         }
+
+        Fordon fordon = startRuta.HittaFordonIRuta(regNr);
+
         if (startRuta.Plats == valdPlats) //Koll om man försöker flytta till samma plats igen
         {
             return null;
@@ -460,8 +494,8 @@ public class ParkeringsGarage   //ska allt här verkligen vara publikt ??
             return fordon;
         }
 
-        startRuta.ParkeradeFordon.Remove(fordon);
-        önskadRuta.ParkeradeFordon.Add(fordon);
+        önskadRuta.LäggTillFordon(fordon);
+        startRuta.TaBortFordon(regNr);
 
         return fordon;
     }
@@ -471,10 +505,39 @@ public class ParkeringsGarage   //ska allt här verkligen vara publikt ??
 public class ParkeringsRuta
 {
     public int Plats { get; }
-    public List<Fordon> ParkeradeFordon { get; set; } = new List<Fordon>();
-    public ParkeringsRuta(int plats)
+    public int MaxKapacitet { get; }
+    private readonly List<Fordon> _parkeradeFordon = new List<Fordon>();    //Listan ligger privat och ej för vem som helst att ändra
+    public IReadOnlyList<Fordon> ParkeradeFordon => _parkeradeFordon.AsReadOnly(); //Ger tillgång utåt att kunna sammanställa listan, se index m.m.
+    public ParkeringsRuta(int plats, int maxKapacitetRuta)
     {
         Plats = plats;
+        MaxKapacitet = maxKapacitetRuta;
+    }
+
+    public bool FinnsLedigPlats(Fordon fordon)
+    {
+        int befintligtUtrymme = _parkeradeFordon.Sum(f => f.Storlek);
+        return (MaxKapacitet - befintligtUtrymme) >= fordon.Storlek;
+    }
+
+    public bool LäggTillFordon(Fordon fordon)
+    {
+        if (!FinnsLedigPlats(fordon))
+        {
+            return false;
+        }
+        _parkeradeFordon.Add(fordon);
+        return true;
+    }
+    public bool TaBortFordon(string regNr)
+    {
+        Fordon fordon = HittaFordonIRuta(regNr);
+        if (fordon != null)
+        {
+            _parkeradeFordon.Remove(fordon);
+            return true;
+        }
+        return false;
     }
     public Fordon HittaFordonIRuta(string regNr)
     {
@@ -487,5 +550,6 @@ public class ParkeringsRuta
         }
         return null;
     }
+
 
 }
