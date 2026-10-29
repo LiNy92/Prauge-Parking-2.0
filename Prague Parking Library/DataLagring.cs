@@ -15,5 +15,34 @@ public class DataLagring
     };
 
     public static void SparaGarage(ParkeringsGarage garage)
+    {
+        try
+        {
+            string jsonString = JsonSerializer.Serialize(garage.Rutor, Options);
+            File.WriteAllText(Filnamn, jsonString);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Kunde inte spara garaget: {ex.Message}");
+        }
+    }
 
-}
+    public static List<ParkeringsRuta>? LaddaGarage()
+    {
+        if(!File.Exists(Filnamn))
+        {
+            return null;
+        }
+
+        try
+        {
+            string jsonString = File.ReadAllText(Filnamn);
+            return JsonSerializer.Deserialize<List<ParkeringsRuta>>(jsonString, Options);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Kunde inte läsa in sparad fil: {ex.Message}");
+        }
+    }
+
+    }
