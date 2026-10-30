@@ -7,13 +7,6 @@ public class ParkeringsVakt
 {
     public void Incheckning(ParkeringsGarage garage, AppConfig config)
     {
-        //var fordonstyp = AnsiConsole.Prompt(
-        //    new SelectionPrompt<string>()
-        //    .Title("Vilket fordon önskar du checka in?")
-        //    .AddChoices("Bil", "MC", "Avbryt"));
-
-        //if (fordonstyp == "Avbryt") return;
-
         var fordonstyp = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                 .Title("Vilket fordon önskar du checka in?")
@@ -33,13 +26,19 @@ public class ParkeringsVakt
         if (AnsiConsole.Confirm("Vill du checka in angivet fordon."))
         {
             Fordon nyttFordon = null;
+            if (!config.Storlek.ContainsKey(fordonstyp))
+            {
+                throw new InvalidOperationException($"Hittade ingen storlek för fordonstypen: {fordonstyp}");
+            }
+            int storlek = config.Storlek[fordonstyp];
+
             switch (fordonstyp)
             {
                 case "Bil":
-                    nyttFordon = new Bil(regNr);
+                    nyttFordon = new Bil(regNr, storlek);
                     break;
                 case "MC":
-                    nyttFordon = new MC(regNr);
+                    nyttFordon = new MC(regNr, storlek);
                     break;
                 case "Buss":
                     break;
@@ -59,7 +58,7 @@ public class ParkeringsVakt
         }
     }
 
-    public void VerkställUtcheckning(ParkeringsGarage garage, AppConfig config)
+    public void Utcheckning(ParkeringsGarage garage, AppConfig config)
     {
         string regNr = AngeRegNr();
         ParkeringsRuta ruta = garage.SökaFordonsPlats(regNr);
@@ -88,7 +87,7 @@ public class ParkeringsVakt
         AnsiConsole.MarkupLine($"[Cornsilk1]Fordon: {fordon.Fordonstyp}\n" +
             $"RegNr: {regNr}\n" +
             $"Plats:{ruta.Plats}\n" +
-            $"Parkerad tid: {tidParkerad.Hours} timmar, {tidParkerad.Minutes} minuter\n" +
+            $"Parkerad tid: {tidParkerad.TotalHours} timmar, {tidParkerad.Minutes} minuter\n" +
             $"Att betala:{kostnad:C2}[/]");
         AnsiConsole.MarkupLine("[DarkOliveGreen1_1]Utcheckning genomförd[/]");
     }

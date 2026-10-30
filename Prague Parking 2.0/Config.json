@@ -9,5 +9,9 @@
     "Bil": 20,
     "MC": 10
   },
+  "Storlek": {
+    "Bil": 4,
+    "MC": 2
+  },
   "Fordonstyp": [ "Bil", "MC" ]
 }

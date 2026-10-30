@@ -3,9 +3,8 @@ namespace Prague_Parking_Library;
 
 public class Bil : Fordon
 {
-    public Bil(string regNr) : base("Bil", regNr)
+    public Bil(string regNr, int storlek) : base("Bil", regNr, storlek)
     {
 
     }
-    public override int Storlek => 4;
 }

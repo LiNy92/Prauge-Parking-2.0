@@ -3,9 +3,8 @@ namespace Prague_Parking_Library;
 
 public class MC : Fordon
 {
-    public MC(string regNr) : base("MC", regNr)
+    public MC(string regNr, int storlek) : base("MC", regNr, storlek)
     {
 
     }
-    public override int Storlek => 2;
 }

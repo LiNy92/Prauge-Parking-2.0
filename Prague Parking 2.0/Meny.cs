@@ -37,7 +37,7 @@ public class Meny
                     }
                 case "Checka ut fordon":
                     {
-                        parkeringsvakt.VerkställUtcheckning(garage, config);
+                        parkeringsvakt.Utcheckning(garage, config);
                         DataLagring.SparaGarage(garage);
                         break;
                     }

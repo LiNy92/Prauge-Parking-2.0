@@ -24,7 +24,8 @@ public class DataLagring
                     Fordonstyp = fordon.Fordonstyp,
                     RegNr = fordon.RegNr,
                     AnkomstTid = fordon.AnkomstTid,
-                    Plats = ruta.Plats
+                    Plats = ruta.Plats,
+                    Storlek = fordon.Storlek,
                 });
             }
         }
@@ -50,11 +51,11 @@ public class DataLagring
 
             if (sparatFordon.Fordonstyp == "Bil")
             {
-                fordon = new Bil(sparatFordon.RegNr);
+                fordon = new Bil(sparatFordon.RegNr, sparatFordon.Storlek);
             }
             else if (sparatFordon.Fordonstyp == "MC")
             {
-                fordon = new MC(sparatFordon.RegNr);
+                fordon = new MC(sparatFordon.RegNr, sparatFordon.Storlek);
             }
             else
             {
@@ -77,4 +78,5 @@ public class SparatFordon
     public string RegNr { get; set; } = "";
     public DateTime AnkomstTid { get; set; }
     public int Plats { get; set; }
+    public int Storlek {  get; set; }
 }
