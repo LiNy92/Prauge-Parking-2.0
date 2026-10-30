@@ -1,23 +1,31 @@
 ﻿
 namespace Prague_Parking_Library
 {
-    public class ParkeringsGarage   //ska allt här verkligen vara publikt ?? - tar bort set - Listan ska ej kunna ändras utifrån
+    public class ParkeringsGarage
     {
-        public List<ParkeringsRuta> Rutor { get; } = new List<ParkeringsRuta>();
-
-        private readonly AppConfig _config;
-        public int KolumnPerRad => _config.GarageSettings.KolumnerPerRadUtskrift;
+        private readonly List<ParkeringsRuta> _rutor = new List<ParkeringsRuta>();
+        public IReadOnlyList<ParkeringsRuta> Rutor => _rutor.AsReadOnly();
+        public int KolumnPerRad { get; }
         public ParkeringsGarage(AppConfig config)
         {
-            _config = config;
+            KolumnPerRad = config.GarageSettings.KolumnerPerRadUtskrift;
+            int antalPlatser = config.GarageSettings.MaxAntalGaragePlatser;
+            int maxKapacitetRuta = config.GarageSettings.MaxKapacitetPerRuta;
 
-            int antalPlatser = _config.GarageSettings.MaxAntalGaragePlatser;
-            int maxKapacitetRuta = _config.GarageSettings.MaxKapacitetPerRuta;
-
-            for (int i = 1; i <= _config.GarageSettings.MaxAntalGaragePlatser; i++)
+            for (int i = 1; i <= antalPlatser; i++)
             {
-                Rutor.Add(new ParkeringsRuta(i, maxKapacitetRuta)); // Lägger till platserna i garaget och maxkapaciteten per ruta
+                _rutor.Add(new ParkeringsRuta(i, maxKapacitetRuta));
             }
+        }
+
+        public bool LäggTillFordon(Fordon fordon, int valdPlats)
+        {
+            if (valdPlats < 1 || valdPlats > _rutor.Count || SökaFordonsPlats(fordon.RegNr) != null)
+            {
+                return false;
+            }
+
+            return _rutor[valdPlats - 1].LäggTillFordon(fordon);
         }
 
         public Dictionary<string, int> BeräknaAntalFordon()
@@ -42,27 +50,29 @@ namespace Prague_Parking_Library
 
         public ParkeringsRuta HittaLedigPlats(Fordon fordon, int valdPlats = 0)
         {
-            if (valdPlats > 0)  //Vid önskan om specifik plats
+            if (valdPlats < 0 || valdPlats > _rutor.Count)
             {
-                ParkeringsRuta valdRuta = Rutor[valdPlats - 1]; //från språkval till rätt index.
+                return null;
+            }
 
-                if (valdRuta.FinnsLedigPlats(fordon))
+            if (valdPlats > 0)
+            {
+                ParkeringsRuta valdRuta = _rutor[valdPlats - 1];
+                if (valdRuta.SökLedigPlats(fordon))
                 {
                     return valdRuta;
                 }
-                return null;    //Ingen tillgänglig plats på önskad ruta
+                return null;
             }
 
-            else // Letar första bästa plats om ej önskemål angivet
+            foreach (var ruta in Rutor)
             {
-                foreach (var ruta in Rutor)
+                if (ruta.SökLedigPlats(fordon))
                 {
-                    if (ruta.FinnsLedigPlats(fordon))
-                    {
-                        return ruta;
-                    }
+                    return ruta;
                 }
             }
+
             return null;
         }
         public ParkeringsRuta SökaFordonsPlats(string regNr)
@@ -95,31 +105,33 @@ namespace Prague_Parking_Library
             return null;
         }
 
-        public Fordon FlyttaFordon(string regNr, int valdPlats)   //Se över denna - allt relevant att kolla ?? {ska man ha try catch istället?
+        public Flyttresultat FlyttaFordon(string regNr, int valdPlats)
         {
-            ParkeringsRuta startRuta = SökaFordonsPlats(regNr);
-            if (startRuta == null)  //Om fordonet inte finns - returneras null och fångas upp här
+            if (valdPlats < 1 || valdPlats > _rutor.Count)
             {
-                return null;
+                return Flyttresultat.OgiltigPlats;
+            }
+
+            ParkeringsRuta startRuta = SökaFordonsPlats(regNr);
+            if (startRuta == null)
+            {
+                return Flyttresultat.FordonSaknas;
             }
 
             Fordon fordon = startRuta.HittaFordonIRuta(regNr);
-
-            if (startRuta.Plats == valdPlats) //Koll om man försöker flytta till samma plats igen
+            if (startRuta.Plats == valdPlats)
             {
-                return null;
+                return Flyttresultat.SammaPlats;
             }
 
             ParkeringsRuta önskadRuta = HittaLedigPlats(fordon, valdPlats);
-            if (önskadRuta == null)
+            if (önskadRuta == null || !önskadRuta.LäggTillFordon(fordon))
             {
-                return fordon;
+                return Flyttresultat.UtrymmeSaknas;
             }
 
-            önskadRuta.LäggTillFordon(fordon);
             startRuta.TaBortFordon(regNr);
-
-            return fordon;
+            return Flyttresultat.Lyckats;
         }
 
     }

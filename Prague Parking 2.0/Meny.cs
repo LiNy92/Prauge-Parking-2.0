@@ -11,43 +11,45 @@ public class Meny
         var garage = new ParkeringsGarage(config);
         var parkeringsvakt = new ParkeringsVakt();
 
-        var sparadData = DataLagring.LaddaGarage();
-        if (sparadData != null && sparadData.Count == garage.Rutor.Count)
-        {
-            garage.Rutor.Clear();
-            garage.Rutor.AddRange(sparadData);
-        }
+        DataLagring.LaddaGarage(garage);
 
         while (true)
         {
             var menyVal = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("Meny - Prauge Parking")
-                    .AddChoices("Checka in fordon", "Checka ut fordon", "Söka fordon", "Flytta fordon", "Visa parkeringsgarage", "Avsluta program"));
+                    .AddChoices(
+                    "Checka in fordon", 
+                    "Checka ut fordon", 
+                    "Söka fordon", 
+                    "Flytta fordon", 
+                    "Visa parkeringsgarage", 
+                    "Avsluta program"));
 
-            AnsiConsole.MarkupLine($"Du har valt: [green]{menyVal}[/]");
+            //AnsiConsole.MarkupLine($"Du har valt: [green]{menyVal}[/]");
             switch (menyVal)
             {
                 case "Checka in fordon":
                     {
-                        parkeringsvakt.PåbörjaIncheckning(garage, config);
+                        parkeringsvakt.Incheckning(garage, config);
+                        DataLagring.SparaGarage(garage);
                         break;
                     }
                 case "Checka ut fordon":
                     {
                         parkeringsvakt.VerkställUtcheckning(garage, config);
+                        DataLagring.SparaGarage(garage);
                         break;
                     }
                 case "Söka fordon":
                     {
-                        string regNr = parkeringsvakt.AngeRegNr();
                         parkeringsvakt.SökaFordonOchPlats(garage);
-
                         break;
                     }
                 case "Flytta fordon":
                     {
                         parkeringsvakt.FlyttaFordon(garage);
+                        DataLagring.SparaGarage(garage);
                         break;
                     }
                 case "Visa parkeringsgarage":

@@ -3,80 +3,96 @@ using Spectre.Console;
 
 namespace Prague_Parking_2._0;
 
-public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
+public class ParkeringsVakt
 {
-    public void PåbörjaIncheckning(ParkeringsGarage garage, AppConfig config)
+    public void Incheckning(ParkeringsGarage garage, AppConfig config)
     {
-        var fordonstyp = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-            .Title("Vilket fordon önskar du checka in?")
-            .AddChoices("Bil", "MC", "Återgå till meny"));
+        //var fordonstyp = AnsiConsole.Prompt(
+        //    new SelectionPrompt<string>()
+        //    .Title("Vilket fordon önskar du checka in?")
+        //    .AddChoices("Bil", "MC", "Avbryt"));
 
-        if (fordonstyp == "Återgå till meny") return;
+        //if (fordonstyp == "Avbryt") return;
+
+        var fordonstyp = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                .Title("Vilket fordon önskar du checka in?")
+                .AddChoices(config.Fordonstyp)
+                .AddChoices("Avbryt"));
+
+        if (fordonstyp == "Avbryt") return;
 
         string regNr = AngeRegNr();
+
         if (garage.SökaFordonsPlats(regNr) != null)
         {
-            AnsiConsole.MarkupLine($"[red]Ett fordon med registreringsrummer {regNr} finns redan incheckat i garaget![/]");
+            AnsiConsole.MarkupLine($"[LightCoral]Ett fordon med registreringsrummer {regNr} finns redan incheckat i garaget![/]");
             return;
         }
 
         if (AnsiConsole.Confirm("Vill du checka in angivet fordon."))
         {
-            try
+            Fordon nyttFordon = null;
+            switch (fordonstyp)
             {
-                Fordon nyttFordon = null;
-                switch (fordonstyp)
-                {
-                    case "Bil":
-                        nyttFordon = new Bil(regNr);
-                        break;
-                    case "MC":
-                        nyttFordon = new MC(regNr);
-                        break;
-                }
-                if (nyttFordon != null)
-                {
-                    ParkeraFordon(garage, nyttFordon, regNr);
-                }
+                case "Bil":
+                    nyttFordon = new Bil(regNr);
+                    break;
+                case "MC":
+                    nyttFordon = new MC(regNr);
+                    break;
+                case "Buss":
+                    break;
+                case "Cykel":
+                    break;
             }
-            catch (ArgumentException ex)
+            ParkeringsRuta ledigRuta = garage.HittaLedigPlats(nyttFordon);
+
+            if (ledigRuta == null)
             {
-                AnsiConsole.MarkupLine($"[red]{ex.Message}[/]");
-                AnsiConsole.Prompt(
-           new TextPrompt<string>("[orange1]Tryck[/] [green]Enter[/] [orange1]för att återgå till meny.[/]")
-           .AllowEmpty());
+                AnsiConsole.MarkupLine("[LightCoral]Ingen ledig plats hittades.[/]");
+                return;
             }
+            ledigRuta.LäggTillFordon(nyttFordon);
+
+            AnsiConsole.MarkupLine($"[DarkOliveGreen1_1]Fordon: {nyttFordon.Fordonstyp}\nRegistreringnummer: {regNr}\nIncheckad på plats: {ledigRuta.Plats}  [/]");
         }
-        return;
     }
 
     public void VerkställUtcheckning(ParkeringsGarage garage, AppConfig config)
     {
         string regNr = AngeRegNr();
-        ParkeringsRuta fordonsPlats = garage.SökaFordonsPlats(regNr);
-        if (fordonsPlats != null)
-        {
-            Fordon fordon = fordonsPlats.HittaFordonIRuta(regNr);
-            PrisLista prisLista = new PrisLista(config);
-            decimal kostnad = prisLista.BeräknaKostnad(fordon);
-            TimeSpan tidParkerad = DateTime.UtcNow - fordon.AnkomstTid;
-            garage.TaBortFordon(regNr);
+        ParkeringsRuta ruta = garage.SökaFordonsPlats(regNr);
 
-
-            AnsiConsole.MarkupLine("[yellow]=== Utcheckning ===[/]");
-            AnsiConsole.MarkupLine($"[green]Fordon: {fordon.Fordonstyp}\n" +
-                $"RegNr: {regNr}\n" +
-                $"Plats:{fordonsPlats.Plats}\n" +
-                $"Parkerad tid: {tidParkerad.Hours} timmar, {tidParkerad.Minutes} minuter\n" +
-                $"Att betala:{kostnad:C2}[/]");
-            AnsiConsole.MarkupLine("Utcheckning genomförd");
-        }
-        else
+        if (ruta == null)
         {
-            AnsiConsole.MarkupLine("Det gick ej att utföra utcheckningen.");
+            AnsiConsole.MarkupLine("[LightCoral]Fordonet hittades inte.[/]");
+            return;
         }
+        Fordon fordon = ruta.HittaFordonIRuta(regNr);
+
+        if (fordon == null)
+        {
+            AnsiConsole.MarkupLine("[LightCoral]Fordon kunde inte hittas i rutan.");
+            return;
+        }
+
+        PrisLista prisLista = new PrisLista(config);
+        decimal kostnad = prisLista.BeräknaKostnad(fordon);
+
+        ruta.TaBortFordon(regNr);
+
+        TimeSpan tidParkerad = RäknaUtParkeringstid(fordon);
+
+        AnsiConsole.MarkupLine("[Gold1]=== Utcheckning ===[/]");
+        AnsiConsole.MarkupLine($"[Cornsilk1]Fordon: {fordon.Fordonstyp}\n" +
+            $"RegNr: {regNr}\n" +
+            $"Plats:{ruta.Plats}\n" +
+            $"Parkerad tid: {tidParkerad.Hours} timmar, {tidParkerad.Minutes} minuter\n" +
+            $"Att betala:{kostnad:C2}[/]");
+        AnsiConsole.MarkupLine("[DarkOliveGreen1_1]Utcheckning genomförd[/]");
     }
+
 
     public string AngeRegNr()
     {
@@ -87,42 +103,62 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
     public void SökaFordonOchPlats(ParkeringsGarage garage)
     {
         string regNr = AngeRegNr();
-        ParkeringsRuta fordonPlats = garage.SökaFordonsPlats(regNr);
-        if (fordonPlats != null)
+        ParkeringsRuta ruta = garage.SökaFordonsPlats(regNr);
+        if (ruta == null)
         {
-            Fordon funnetFordon = fordonPlats.HittaFordonIRuta(regNr);
-            AnsiConsole.MarkupLine($"[green]Fordon: {funnetFordon.Fordonstyp}\nRegNr: {regNr}\nPlats:{fordonPlats.Plats}[/]");
+            AnsiConsole.MarkupLine("[LightCoral]Fordonet hittades inte.[/]");
+            return;
         }
-        else
+        Fordon fordon = ruta.HittaFordonIRuta(regNr);
+
+        if (fordon == null)
         {
-            AnsiConsole.MarkupLine("[red]Fordonet hittades inte.[/]");
+            AnsiConsole.MarkupLine("[LightCoral]Fordon kunde inte hittas i rutan.");
+            return;
         }
+        TimeSpan tidParkerad = RäknaUtParkeringstid(fordon);
+        AnsiConsole.MarkupLine($"[DarkOliveGreen1_1]Fordon: {fordon.Fordonstyp}\nRegNr: {regNr}\nPlats:{ruta.Plats}\nParkeringstid:{tidParkerad}[/]");
+
     }
 
     public void FlyttaFordon(ParkeringsGarage garage)
     {
         string regNr = AngeRegNr();
-        int antalPlatser = garage.Rutor.Count;
-        int valdPlats = AnsiConsole.Prompt(new TextPrompt<int>("Vilken plats vill du flytta fordonet till (1-100)?")
+
+        int valdPlats = AnsiConsole.Prompt(new TextPrompt<int>($"Vilken plats vill du flytta fordonet till (1-{garage.Rutor.Count})?")
             .Validate(plats =>
             {
-                if (plats >= 1 && plats <= antalPlatser)
+                if (plats >= 1 && plats <= garage.Rutor.Count)
                 {
                     return ValidationResult.Success();
                 }
-                return ValidationResult.Error("[red]Ogiltigt! Du måste välja en plats mellan 1 och 100.[/]");
+                return ValidationResult.Error($"[LightCoral]Ogiltigt! Du måste välja en plats mellan 1 och {garage.Rutor.Count}.[/]");
             }));
-        Fordon flyttatFordon = garage.FlyttaFordon(regNr, valdPlats);
 
-        if (flyttatFordon != null)
+        Flyttresultat resultat = garage.FlyttaFordon(regNr, valdPlats);
+
+        switch (resultat)
         {
-            AnsiConsole.MarkupLine($"[green]{flyttatFordon.Fordonstyp} {regNr} har flyttats tills plats {valdPlats}[/]");
+            case Flyttresultat.Lyckats:
+                AnsiConsole.MarkupLine($"[DarkOliveGreen1_1]{regNr} har flyttats till plats {valdPlats}.[/]");
+                break;
+            case Flyttresultat.FordonSaknas:
+                AnsiConsole.MarkupLine("[LightCoral]Fordonet hittades inte.[/]");
+                break;
+            case Flyttresultat.SammaPlats:
+                AnsiConsole.MarkupLine("[LightCoral]Fordonet står redan på den platsen.[/]");
+                break;
+            case Flyttresultat.UtrymmeSaknas:
+                AnsiConsole.MarkupLine("[LightCoral]Det finns inte tillräckligt med utrymme på den platsen.[/]");
+                break;
+            case Flyttresultat.OgiltigPlats:
+                AnsiConsole.MarkupLine("[LightCoral]Platsnumret är ogiltigt.[/]");
+                break;
         }
-        else
-        {
-            AnsiConsole.MarkupLine("[red]Fordonet kunde ej flyttas till önskad plats.[/]");
-        }
+
     }
+
+
     public void VisaParkeringsGarage(ParkeringsGarage garage)
     {
         VisaStatistik(garage);
@@ -135,8 +171,6 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
     {
         var antalFordon = garage.BeräknaAntalFordon();
         int totaltAntalFordon = antalFordon.Values.Sum();
-        int totalaRutor = garage.Rutor.Count;
-        //int upptagnaRutor = garage.Rutor.Count(ruta => ruta.ParkeradeFordon.Count > 0);
 
         string grundText = $"[bold]Antal fordon:[/] {totaltAntalFordon}\n\n [bold]Parkerade fordon:[/]\n";
 
@@ -212,19 +246,9 @@ public class ParkeringsVakt     //Osäker kring denna klass .. Genomföraren.
         }
         AnsiConsole.Write(tabell);
     }
-
-    private void ParkeraFordon(ParkeringsGarage garage, Fordon nyttFordon, string regNr)
+    private TimeSpan RäknaUtParkeringstid(Fordon fordon)
     {
-        ParkeringsRuta ledigPlats = garage.HittaLedigPlats(nyttFordon);
-        if (ledigPlats != null)
-        {
-            ledigPlats.LäggTillFordon(nyttFordon);
-            AnsiConsole.MarkupLine($"[green]Fordon: {nyttFordon.Fordonstyp}\nRegistreringnummer: {regNr}\nIncheckad på plats: {ledigPlats.Plats}  [/]");
-        }
-        else
-        {
-
-            AnsiConsole.MarkupLine($"[red]Ingen ledig plats hittades.[/]");
-        }
+        TimeSpan tidParkerad = DateTime.UtcNow - fordon.AnkomstTid;
+        return tidParkerad;
     }
 }
