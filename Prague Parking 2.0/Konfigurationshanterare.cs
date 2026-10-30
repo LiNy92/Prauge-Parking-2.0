@@ -18,7 +18,7 @@ public class Konfigurationshanterare
         try
         {
             string jsonString = File.ReadAllText(filNamn);
-            return JsonSerializer.Deserialize<AppConfig>(jsonString) ?? new AppConfig();
+            return JsonSerializer.Deserialize<AppConfig>(jsonString) ?? new AppConfig();    //Om filen är tom skapas en ny med standardvärden
         }
         catch (JsonException)
         {

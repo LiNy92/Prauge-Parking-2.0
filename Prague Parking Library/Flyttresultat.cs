@@ -1,5 +1,4 @@
-﻿
-namespace Prague_Parking_Library;
+﻿namespace Prague_Parking_Library;
 
 public enum Flyttresultat
 {

@@ -1,5 +1,6 @@
 ﻿using Prague_Parking_Library;
 using Spectre.Console;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Prague_Parking_2._0;
 
@@ -40,7 +41,7 @@ public class ParkeringsVakt
                 case "MC":
                     nyttFordon = new MC(regNr, storlek);
                     break;
-                case "Buss":
+                case "Buss":    //Förberedda platser för V2.2
                     break;
                 case "Cykel":
                     break;
@@ -163,7 +164,7 @@ public class ParkeringsVakt
         VisaStatistik(garage);
         VisaParkeringsplatser(garage);
         AnsiConsole.Prompt(
-            new TextPrompt<string>("Tryck [green]Enter[/] för att återgå till meny.")
+            new TextPrompt<string>("Tryck [MediumSpringGreen]Enter[/] för att återgå till meny.")
             .AllowEmpty());
     }
     private void VisaStatistik(ParkeringsGarage garage)
@@ -188,7 +189,7 @@ public class ParkeringsVakt
         var statistikPanel = new Panel(grundText.TrimEnd())
             .Header("[yellow]Sammanställning[/]")
             .Border(BoxBorder.Rounded)
-            .Padding(1, 1);
+            .Padding(0, 0);
 
         AnsiConsole.Write(statistikPanel);
     }
@@ -220,7 +221,7 @@ public class ParkeringsVakt
 
                     if (ruta.ParkeradeFordon.Count == 0)
                     {
-                        textIRutan += "[green]Ledig[/]";
+                        textIRutan += "[MediumSpringGreen]{Ledig}[/]";
                     }
                     else
                     {
@@ -228,9 +229,10 @@ public class ParkeringsVakt
                         string färg;
                         if (upptaget == ruta.MaxKapacitet) { färg = "red"; }
                         else { färg = "orange1"; }
-
+                        
+                        
                         foreach (var fordon in ruta.ParkeradeFordon)
-                        {
+                        {   
                             textIRutan += $"[{färg}] {fordon.Fordonstyp} {fordon.RegNr}[/]";
                         }
 
