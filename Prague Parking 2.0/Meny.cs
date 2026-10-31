@@ -17,16 +17,18 @@ public class Meny
         {
             var menyVal = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("Meny - Prauge Parking")
+                    .Title("[LightPink3][bold]=== Meny - Prauge Parking ===[/][/]")
+                    .HighlightStyle(new Style(foreground: Color.LightPink3))
                     .AddChoices(
-                    "Checka in fordon", 
-                    "Checka ut fordon", 
-                    "Söka fordon", 
-                    "Flytta fordon", 
-                    "Visa parkeringsgarage", 
+                    "Checka in fordon",
+                    "Checka ut fordon",
+                    "Söka fordon",
+                    "Flytta fordon",
+                    "Visa parkeringsgarage",
                     "Avsluta program"));
 
-            //AnsiConsole.MarkupLine($"Du har valt: [green]{menyVal}[/]");
+
+            //AnsiConsole.MarkupLine($"Du har valt: [PaleGreen3_1]{menyVal}[/]");
             switch (menyVal)
             {
                 case "Checka in fordon":
@@ -63,6 +65,11 @@ public class Meny
                         return; 
                     }
             }
+            Console.WriteLine();
+            AnsiConsole.Prompt(
+    new TextPrompt<string>("Tryck [PaleGreen3_1]Enter[/] för att återgå till meny.")
+    .AllowEmpty());
+            Console.WriteLine();
         }
     }
 }

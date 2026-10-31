@@ -6,6 +6,8 @@ internal class Program
 {
     static void Main(string[] args)
     {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+
         AppConfig config = Konfigurationshanterare.Ladda();
 
         var meny = new Meny();

@@ -1,6 +1,5 @@
 ﻿using Prague_Parking_Library;
 using Spectre.Console;
-using System.Reflection.Metadata.Ecma335;
 
 namespace Prague_Parking_2._0;
 
@@ -8,9 +7,11 @@ public class ParkeringsVakt
 {
     public void Incheckning(ParkeringsGarage garage, AppConfig config)
     {
+        VisaPrislista();
         var fordonstyp = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                 .Title("Vilket fordon önskar du checka in?")
+                .HighlightStyle(new Style(foreground: Color.LightPink3))
                 .AddChoices(config.Fordonstyp)
                 .AddChoices("Avbryt"));
 
@@ -55,10 +56,9 @@ public class ParkeringsVakt
             }
             ledigRuta.LäggTillFordon(nyttFordon);
 
-            AnsiConsole.MarkupLine($"[DarkOliveGreen1_1]Fordon: {nyttFordon.Fordonstyp}\nRegistreringnummer: {regNr}\nIncheckad på plats: {ledigRuta.Plats}  [/]");
+            AnsiConsole.MarkupLine($"[PaleGreen3_1]Fordon:[/] {nyttFordon.Fordonstyp}\n[PaleGreen3_1]Registreringnummer:[/] {regNr}\n[PaleGreen3_1]Incheckad på plats:[/] {ledigRuta.Plats}");
         }
     }
-
     public void Utcheckning(ParkeringsGarage garage, AppConfig config)
     {
         string regNr = AngeRegNr();
@@ -84,20 +84,18 @@ public class ParkeringsVakt
 
         TimeSpan tidParkerad = RäknaUtParkeringstid(fordon);
 
-        AnsiConsole.MarkupLine("[Gold1]=== Utcheckning ===[/]");
+        AnsiConsole.MarkupLine("[LightPink3]=== Utcheckning ===[/]");
         AnsiConsole.MarkupLine($"[Cornsilk1]Fordon: {fordon.Fordonstyp}\n" +
             $"RegNr: {regNr}\n" +
             $"Plats:{ruta.Plats}\n" +
-            $"Parkerad tid: {tidParkerad.TotalHours} timmar, {tidParkerad.Minutes} minuter\n" +
-            $"Att betala:{kostnad:C2}[/]");
-        AnsiConsole.MarkupLine("[DarkOliveGreen1_1]Utcheckning genomförd[/]");
+            $"Parkerad tid:{tidParkerad.Days} dagar, {tidParkerad.Hours} timmar, {tidParkerad.Minutes} minuter\n" +
+            $"Att betala:{kostnad:N2} CZK[/]");
+        AnsiConsole.MarkupLine("[PaleGreen3_1]Utcheckning genomförd[/]");
     }
-
-
     public string AngeRegNr()
     {
-        var regNr = AnsiConsole.Ask<string>("[green]\nVänligen ange registreringsnummer (max 10 tecken):[/]").ToUpper().Trim();
-        AnsiConsole.MarkupLine($"Du angav registreringsnummer: [red]{regNr}[/]");
+        var regNr = AnsiConsole.Ask<string>("[Cornsilk1]\nVänligen ange registreringsnummer (max 10 tecken):[/]").ToUpper().Trim();
+        AnsiConsole.MarkupLine($"Du angav registreringsnummer: [LightSkyBlue1]{regNr}[/]");
         return regNr;
     }
     public void SökaFordonOchPlats(ParkeringsGarage garage)
@@ -117,10 +115,9 @@ public class ParkeringsVakt
             return;
         }
         TimeSpan tidParkerad = RäknaUtParkeringstid(fordon);
-        AnsiConsole.MarkupLine($"[DarkOliveGreen1_1]Fordon: {fordon.Fordonstyp}\nRegNr: {regNr}\nPlats:{ruta.Plats}\nParkeringstid:{tidParkerad}[/]");
+        AnsiConsole.MarkupLine($"[PaleGreen3_1]Fordon:[/] {fordon.Fordonstyp}\n[PaleGreen3_1]RegNr:[/] {regNr}\n[PaleGreen3_1]Plats:[/]{ruta.Plats}\n[PaleGreen3_1]Parkeringstid:[/]{tidParkerad.Days} dagar, {tidParkerad.Hours} timmar, {tidParkerad.Minutes} minuter");
 
     }
-
     public void FlyttaFordon(ParkeringsGarage garage)
     {
         string regNr = AngeRegNr();
@@ -140,7 +137,7 @@ public class ParkeringsVakt
         switch (resultat)
         {
             case Flyttresultat.Lyckats:
-                AnsiConsole.MarkupLine($"[DarkOliveGreen1_1]{regNr} har flyttats till plats {valdPlats}.[/]");
+                AnsiConsole.MarkupLine($"[PaleGreen3_1]{regNr} har flyttats till plats {valdPlats}.[/]");
                 break;
             case Flyttresultat.FordonSaknas:
                 AnsiConsole.MarkupLine("[LightCoral]Fordonet hittades inte.[/]");
@@ -157,22 +154,18 @@ public class ParkeringsVakt
         }
 
     }
-
-
     public void VisaParkeringsGarage(ParkeringsGarage garage)
     {
-        VisaStatistik(garage);
         VisaParkeringsplatser(garage);
-        AnsiConsole.Prompt(
-            new TextPrompt<string>("Tryck [MediumSpringGreen]Enter[/] för att återgå till meny.")
-            .AllowEmpty());
+        Console.WriteLine();
+        VisaStatistik(garage);
     }
     private void VisaStatistik(ParkeringsGarage garage)
     {
         var antalFordon = garage.BeräknaAntalFordon();
         int totaltAntalFordon = antalFordon.Values.Sum();
 
-        string grundText = $"[bold]Antal fordon:[/] {totaltAntalFordon}\n\n [bold]Parkerade fordon:[/]\n";
+        string grundText = $"[bold]Parkerade fordon:[/] {totaltAntalFordon}\n[bold]Fordonstyp: [/]\n";
 
         if (antalFordon.Count > 0)
         {
@@ -187,18 +180,23 @@ public class ParkeringsVakt
         }
 
         var statistikPanel = new Panel(grundText.TrimEnd())
-            .Header("[yellow]Sammanställning[/]")
+            .Header("\n[yellow]Sammanställning[/]")
             .Border(BoxBorder.Rounded)
             .Padding(0, 0);
 
         AnsiConsole.Write(statistikPanel);
+
+        var förklaringar = new Panel("[IndianRed1]Röd:[/] Upptaget\n[LightGoldenrod2_1]Orange:[/] Delvis upptaget".TrimEnd())
+    .Header("\n[yellow]Färgkodning[/]")
+    .Border(BoxBorder.Rounded)
+    .Padding(0, 0);
+        AnsiConsole.Write(förklaringar);
     }
     private void VisaParkeringsplatser(ParkeringsGarage garage)
     {
         var tabell = new Table();
         tabell.Border(TableBorder.None);
-        tabell.HideHeaders();
-        tabell.Title("[bold cyan]Prague Parking - Garageöversikt[/]");
+        tabell.Title("[LightPink3]=== Prague Parking - Garageöversikt ===[/]");
 
         int kolumnPerRad = garage.KolumnPerRad;
 
@@ -217,39 +215,50 @@ public class ParkeringsVakt
                 if (index < garage.Rutor.Count)
                 {
                     var ruta = garage.Rutor[index];
-                    string textIRutan = $"[bold]{ruta.Plats}[/]\n";
+                    //string textIRutan = $"[bold]{ruta.Plats}[/]";
+                    string textIRutan;
 
                     if (ruta.ParkeradeFordon.Count == 0)
                     {
-                        textIRutan += "[MediumSpringGreen]{Ledig}[/]";
+                        textIRutan = "[PaleGreen3_1]Ledig[/]";
                     }
                     else
                     {
                         int upptaget = ruta.ParkeradeFordon.Sum(fordon => fordon.Storlek);
                         string färg;
-                        if (upptaget == ruta.MaxKapacitet) { färg = "red"; }
-                        else { färg = "orange1"; }
-                        
-                        
-                        foreach (var fordon in ruta.ParkeradeFordon)
-                        {   
-                            textIRutan += $"[{färg}] {fordon.Fordonstyp} {fordon.RegNr}[/]";
-                        }
+                        if (upptaget == ruta.MaxKapacitet) { färg = "IndianRed1"; }
+                        else { färg = "LightGoldenrod2_1"; }
+
+                        var fordonRader = ruta.ParkeradeFordon
+                            .Select(fordon => $"[{färg}]{fordon.Fordonstyp}: {fordon.RegNr}[/]");
+
+                        textIRutan = string.Join("\n", fordonRader);
 
                     }
                     rad[j] = new Panel(textIRutan)
                          .Border(BoxBorder.Rounded)
+                         .Header($"{ruta.Plats}")
                             .PadLeft(0)
-                            .PadRight(0);
+                            .PadRight(0)
+                            .Expand()
+                            .HeaderAlignment(Justify.Center);
                 }
             }
             tabell.AddRow(rad);
         }
-        AnsiConsole.Write(tabell);
+        AnsiConsole.Write(Align.Left(tabell));
     }
     private TimeSpan RäknaUtParkeringstid(Fordon fordon)
     {
         TimeSpan tidParkerad = DateTime.UtcNow - fordon.AnkomstTid;
         return tidParkerad;
+    }
+    public static void VisaPrislista()
+    {
+        var prisLista = new Panel("Friparkering: 10 minuter\n[LightSkyBlue1]Bil:[/] 20 CZK/h\n[LightSkyBlue1]MC:[/] 10 CZK/h\nTimpris - Per påbörjade timme.".TrimEnd())
+    .Header("\n[yellow]Prislista[/]")
+    .Border(BoxBorder.Rounded)
+    .Padding(0, 0);
+        AnsiConsole.Write(prisLista);
     }
 }
