@@ -16,5 +16,4 @@ public class AppConfig
         ["MC"] = 2
     };
     public List<string> Fordonstyp { get; set; } = new List<string> { "Bil", "MC" };
- 
 }
