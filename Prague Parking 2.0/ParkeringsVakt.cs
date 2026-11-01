@@ -255,7 +255,7 @@ public class ParkeringsVakt
     }
     public static void VisaPrislista()
     {
-        var prisLista = new Panel("Friparkering: 10 minuter\n[LightSkyBlue1]Bil:[/] 20 CZK/h\n[LightSkyBlue1]MC:[/] 10 CZK/h\nTimpris - Per påbörjade timme.".TrimEnd())
+        var prisLista = new Panel("Friparkering: 10 minuter\n[LightSkyBlue1]Bil:[/] 20 CZK/h\n[LightSkyBlue1]MC:[/] 10 CZK/h\nTimpris - Per påbörjad timme.".TrimEnd())
     .Header("\n[yellow]Prislista[/]")
     .Border(BoxBorder.Rounded)
     .Padding(0, 0);
