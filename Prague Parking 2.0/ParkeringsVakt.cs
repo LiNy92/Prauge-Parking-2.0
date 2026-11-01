@@ -7,7 +7,7 @@ public class ParkeringsVakt
 {
     public void Incheckning(ParkeringsGarage garage, AppConfig config)
     {
-        VisaPrislista();
+        VisaPrislista(config);
         var fordonstyp = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                 .Title("Vilket fordon önskar du checka in?")
@@ -94,7 +94,18 @@ public class ParkeringsVakt
     }
     public string AngeRegNr()
     {
-        var regNr = AnsiConsole.Ask<string>("[Cornsilk1]\nVänligen ange registreringsnummer (max 10 tecken):[/]").ToUpper().Trim();
+        var regNr = AnsiConsole.Prompt(
+            new TextPrompt<string>("[Cornsilk1]\nVänligen ange registreringsnummer (max 10 tecken):[/]")
+                .Validate(input =>
+                {
+                    string värde = input.Trim();
+                    if (värde.Length == 0 || värde.Length > 10)
+                    {
+                        return ValidationResult.Error("[LightCoral]Registreringsnumret måste vara mellan 1 och 10 tecken.[/]");
+                    }
+
+                    return ValidationResult.Success();
+                })).Trim().ToUpper();
         AnsiConsole.MarkupLine($"Du angav registreringsnummer: [LightSkyBlue1]{regNr}[/]");
         return regNr;
     }
@@ -253,12 +264,14 @@ public class ParkeringsVakt
         TimeSpan tidParkerad = DateTime.UtcNow - fordon.AnkomstTid;
         return tidParkerad;
     }
-    public static void VisaPrislista()
+    public static void VisaPrislista(AppConfig config)
     {
-        var prisLista = new Panel("Friparkering: 10 minuter\n[LightSkyBlue1]Bil:[/] 20 CZK/h\n[LightSkyBlue1]MC:[/] 10 CZK/h\nTimpris - Per påbörjad timme.".TrimEnd())
-    .Header("\n[yellow]Prislista[/]")
-    .Border(BoxBorder.Rounded)
-    .Padding(0, 0);
+        string prisrader = string.Join(Environment.NewLine,
+            config.Fordonstyp.Select(typ => $"[LightSkyBlue1]{typ}:[/] {config.Priser[typ]} CZK/h"));
+        var prisLista = new Panel($"Friparkering: {config.FriaMinuter} minuter\n{prisrader}\nTimpris - Per påbörjad timme.")
+            .Header("\n[yellow]Prislista[/]")
+            .Border(BoxBorder.Rounded)
+            .Padding(0, 0);
         AnsiConsole.Write(prisLista);
     }
 }
