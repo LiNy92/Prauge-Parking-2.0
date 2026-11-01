@@ -10,7 +10,7 @@ public abstract class Fordon
     {
         if (string.IsNullOrWhiteSpace(regNr) || regNr.Length > 10)
         {
-            throw new ArgumentException("Ogiltig inmatning. Registeringsnumret får ej vara tomt eller innehålla fler än 10 tecken. Försök igen.");
+            throw new ArgumentException("Ogiltig inmatning. Registeringsnumret får ej vara tomt eller innehålla fler än 10 tecken.");
         }
         Fordonstyp = fordonstyp;
         RegNr = regNr;
